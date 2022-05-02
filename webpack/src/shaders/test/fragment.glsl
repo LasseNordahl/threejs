@@ -8,6 +8,9 @@ uniform float uTime;
 
 varying vec2 vUv;
 
+#pragma glslify: grain = require('glsl-film-grain')
+// #pragma glslify: snoise3 = require('glsl-noise/simplex/3d')
+
 vec4 permute(vec4 x) {
   return mod(((x*34.0)+1.0)*x, 289.0);
 }
@@ -90,16 +93,29 @@ float cnoise(vec3 P) {
 
 vec3 mixMultiple(vec3 colorOne, vec3 colorTwo, vec3 colorThree, vec3 colorFour, float strength) {
   vec3 color = mix(colorOne, colorTwo, smoothstep(0.0, 0.33, strength));
-  color = mix(color, colorThree, smoothstep(0.33, 0.66, strength));
+  color = mix(color, colorThree, smoothstep(0.5, 0.66, strength));
   color = mix(color, colorFour, smoothstep(0.66, 1.0, strength));
   return color;
+}
+
+float random( vec2 p ) {
+  vec2 K1 = vec2(
+    23.14069263277926, // e^pi (Gelfond's constant)
+    2.665144142690225 // 2^sqrt(2) (Gelfond–Schneider constant)
+  );
+  return fract( cos( dot(p,K1) ) * 12345.6789 );
 }
 
 void main() {
   // float strength = step(0.9, sin(cnoise(vec3(vUv * 2.0, uTime * 0.1)) * 7.0));
   float strength = sin(cnoise(vec3(vUv * 2.0, uTime * 0.1)) * 7.0);
-
+  
   vec3 color = mixMultiple(uBlack, uBlue, uPurple, uTeal, strength);
 
+  vec2 uvRandom = vUv;
+  uvRandom.y *= random(vec2(uvRandom.y, 1.0));
+  color.rgb += random(uvRandom) * 0.15;
   gl_FragColor = vec4(color, 1.0);
+
+  // gl_FragColor = vec4(color, 1.0);
 }
